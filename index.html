@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAR-SUIKAGAME</title>
+    <!-- Matter.js 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            background-color: #0b0c10;
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        h1 {
+            margin: 5px 0;
+            color: #00ffcc;
+            font-size: 26px;
+            text-shadow: 0 0 10px rgba(0,255,204,0.5);
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #c5c6c7;
+            margin-bottom: 20px;
+        }
+        
+        .game-wrapper {
+            display: flex;
+            gap: 25px;
+            align-items: stretch;
+        }
+
+        #game-container {
+            position: relative;
+            width: 420px;
+            height: 650px;
+            border: 4px solid #1f2833;
+            background: radial-gradient(circle, #151922 0%, #0b0c10 100%);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0,255,204,0.15);
+            overflow: hidden;
+        }
+
+        /* Matter.js가 생성할 캔버스 스타일 */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .deadline-container {
+            position: absolute;
+            top: 120px; 
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.2; 
+            color: #ff4d4d;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 2px;
+            transition: opacity 0.2s ease, color 0.2s ease;
+        }
+        .deadline-active {
+            opacity: 1 !important;
+            text-shadow: 0 0 8px #ff0000;
+        }
+
+        .side-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 210px;
+        }
+
+        .next-panel {
+            background: #121721;
+            border: 2px solid #00ffcc;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,255,204,0.1);
+        }
+        .panel-title {
+            font-size: 13px;
+            color: #00ffcc;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        #next-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.4);
+            color: white;
+        }
+
+        .tech-tree-panel {
+            background: #121721;
+            border: 2px solid #1f2833;
+            padding: 15px 12px;
+            border-radius: 10px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .tech-node {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            font-size: 12px;
+            border-left: 4px solid #fff;
+        }
+        .tech-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            color: white;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .end-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: bang 0.6s ease-out forwards;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #supernova-screen {
+            background: radial-gradient(circle, #fff 0%, #ff007f 40%, #0b0c10 80%);
+        }
+
+        #gameover-screen {
+            background: radial-gradient(circle, #2a0808 0%, #0f0202 70%, #000 100%);
+            border: 4px solid #ff4d4d;
+            border-radius: 8px;
+        }
+
+        @keyframes bang {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1> ✨ STAR-SUIKAGAME ✨ </h1>
+    <div class="subtitle"></div>
+
+    <div class="game-wrapper">
+        <div id="game-container">
+            <div class="deadline-container" id="deadline-ui">---------------- 2.00 ----------------</div>
+
+            <!-- 승리 화면 -->
+            <div class="end-screen" id="supernova-screen">
+                <h1 style="color: #fff; font-size: 36px; text-shadow: 0 0 20px #ff007f;">SUPERNOVA!</h1>
+                <p style="font-weight: bold; text-align: center; color: #fff; line-height: 1.6; font-size: 14px;">
+                    완벽한 규소 연소 단계를 거쳐 철(Fe) 중심핵이 완성되었습니다!<br>
+                    거대한 초신성 폭발과 함께 우주가 확장됩니다!
+                </p>
+                <button onclick="location.reload()" style="background:#00ffcc; color:#0b0c10; border:none; padding:12px 30px; font-weight:bold; cursor:pointer; border-radius:5px; margin-top:20px; font-size:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">새로운 우주 만들기</button>
+            </div>
+
+            <!-- 실패 화면 -->
+            <div class="end-screen" id="gameover-screen">
+                <h1 style="color: #ff4d4d; font-size: 36px; text-shadow: 0 0 20px #ff0000;">MISSION FAILED</h1>
+                <p style="font-weight: bold; text-align: center; color: #c5c6c7; line-height: 1.6; font-size: 14px;">
+                    질량이 통제 한계선을 넘어가 항성의 중력 균형이 무너졌습니다.<br>
+                    블랙홀이 되어 우주가 삼켜졌습니다.
+                </p>
+                <button onclick="location.reload()" style="background:#ff4d4d; color:#fff; border:none; padding:12px 30px; font-weight:bold; cursor:pointer; border-radius:5px; margin-top:20px; font-size:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">우주 재부팅하기</button>
+            </div>
+        </div>
+
+        <div class="side-dashboard">
+            <div class="next-panel">
+                <div class="panel-title">NEXT STAR</div>
+                <div id="next-preview"></div>
+            </div>
+
+            <div class="tech-tree-panel">
+                <div class="panel-title" style="color: #66fcf1; text-align: center; border-bottom: 1px solid #1f2833; padding-bottom: 3px; margin-bottom: 3px;">STELLAR EVOLUTION</div>
+                <div class="tech-node" style="border-color: #ff4d4d;"><div class="tech-circle" style="background:#ff4d4d">H</div> 수소 [스폰 60%]</div>
+                <div class="tech-node" style="border-color: #ff9f43;"><div class="tech-circle" style="background:#ff9f43">He</div> 헬륨 [스폰 30%]</div>
+                <div class="tech-node" style="border-color: #f1c40f;"><div class="tech-circle" style="background:#f1c40f">C</div> 탄소 [스폰 10%]</div>
+                <div class="tech-node" style="border-color: #2ecc71;"><div class="tech-circle" style="background:#2ecc71">O</div> 산소 [조합]</div>
+                <div class="tech-node" style="border-color: #00d2d3;"><div class="tech-circle" style="background:#00d2d3">Ne</div> 네온 [조합]</div>
+                <div class="tech-node" style="border-color: #ff9ff3;"><div class="tech-circle" style="background:#ff9ff3">Mg</div> 마그네슘 [조합]</div>
+                <div class="tech-node" style="border-color: #3498db;"><div class="tech-circle" style="background:#3498db">Si</div> 규소 [조합]</div>
+                <div class="tech-node" style="border-color: #9b59b6;"><div class="tech-circle" style="background:#9b59b6">Fe</div> 철 [최종 진화]</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Matter.js 모듈 추출
+    const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+    const container = document.getElementById('game-container');
+    const nextPreview = document.getElementById('next-preview');
+    const deadlineUI = document.getElementById('deadline-ui');
+    
+    const containerWidth = 420;
+    const containerHeight = 650;
+    const deadlineY = 120; 
+
+    // 원소 프리셋 데이터
+    const elementTypes = [
+        { level: 0, symbol: "H",  radius: 15,  color: "#ff4d4d" },
+        { level: 1, symbol: "He", radius: 26,  color: "#ff9f43" },
+        { level: 2, symbol: "C",  radius: 40,  color: "#f1c40f" },
+        { level: 3, symbol: "O",  radius: 55,  color: "#2ecc71" },
+        { level: 4, symbol: "Ne", radius: 70,  color: "#00d2d3" }, 
+        { level: 5, symbol: "Mg", radius: 85,  color: "#ff9ff3" }, 
+        { level: 6, symbol: "Si", radius: 100, color: "#3498db" },
+        { level: 7, symbol: "Fe", radius: 115, color: "#9b59b6" }
+    ];
+
+    // 물리 엔진 모듈 초기화
+    const engine = Engine.create({
+        gravity: { y: 0.9, x: 0 } // 중력 설정
+    });
+
+    // 렌더러 설정 (원소 텍스트를 커스텀해서 그리기 위해 특별 세팅)
+    const render = Render.create({
+        element: container,
+        engine: engine,
+        options: {
+            width: containerWidth,
+            height: containerHeight,
+            background: 'transparent',
+            wireframes: false // 솔리드 컬러 채우기 활성화
+        }
+    });
+
+    Render.run(render);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    // 1. 벽면 에지 월 배치 (두께 50px로 뚫림 버그 예방)
+    const wallOptions = { isStatic: true, render: { fillStyle: '#1f2833' }, friction: 0.1 };
+    const ground = Bodies.rectangle(containerWidth / 2, containerHeight + 25, containerWidth, 50, wallOptions);
+    const leftWall = Bodies.rectangle(-25, containerHeight / 2, 50, containerHeight, wallOptions);
+    const rightWall = Bodies.rectangle(containerWidth + 25, containerHeight / 2, 50, containerHeight, wallOptions);
+    Composite.add(engine.world, [ground, leftWall, rightWall]);
+
+    // 전역 상태 변수
+    let currentLevel = 0; 
+    let nextLevel = 0;
+    let isClickCooldown = false;
+    let isGameOverStarted = false; 
+    let readyBallBody = null; // 마우스 따라다니는 가상 공
+    let currentMouseX = containerWidth / 2;
+
+    let isAboveDeadline = false;
+    let timeRemaining = 2.00;
+    let lastTime = performance.now();
+
+    function getRandomLevelByProbability() {
+        const rand = Math.random() * 100;
+        if (rand < 60) return 0;
+        else if (rand < 90) return 1;
+        else return 2;
+    }
+
+    function initGame() {
+        currentLevel = getRandomLevelByProbability(); 
+        nextLevel = getRandomLevelByProbability();
+        createReadyBall();
+        updateNextPreviewUI();
+    }
+
+    // 마우스 조준용 가상 가이드 바디 생성
+    function createReadyBall() {
+        if (isGameOverStarted) return;
+        if (readyBallBody) Composite.remove(engine.world, readyBallBody);
+
+        const p = elementTypes[currentLevel];
+        // 충돌하지 않도록 센서(isSensor) 옵션과 중력 배제 처리
+        readyBallBody = Bodies.circle(currentMouseX, 45, p.radius, {
+            isSensor: true,
+            isStatic: true,
+            plugin: { level: currentLevel, symbol: p.symbol, isGameBall: false },
+            render: {
+                fillStyle: p.color,
+                opacity: 0.8
+            }
+        });
+        Composite.add(engine.world, readyBallBody);
+    }
+
+    function updateNextPreviewUI() {
+        if (isGameOverStarted) return;
+        const p = elementTypes[nextLevel];
+        nextPreview.style.backgroundColor = p.color;
+        nextPreview.innerText = p.symbol;
+        nextPreview.style.fontSize = "15px";
+    }
+
+    // 마우스 조준 이동 추적
+    container.addEventListener('mousemove', (e) => {
+        if (isGameOverStarted || isClickCooldown || !readyBallBody) return; 
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const radius = elementTypes[currentLevel].radius;
+        currentMouseX = Math.max(radius, Math.min(containerWidth - radius, mouseX));
+        
+        Body.setPosition(readyBallBody, { x: currentMouseX, y: 45 });
+    });
+
+    // 클릭 시 투하 물리 바디 생성
+    container.addEventListener('click', () => {
+        if (isClickCooldown || isGameOverStarted || !readyBallBody) return;
+
+        // 실제 가혹 마찰력이 적용된 물리 공 낙하
+        createBall(readyBallBody.position.x, 75, currentLevel, true);
+
+        // 조준 공 일시 투명화 및 쿨다운
+        isClickCooldown = true;
+        Composite.remove(engine.world, readyBallBody);
+        readyBallBody = null;
+
+        currentLevel = nextLevel;
+        nextLevel = getRandomLevelByProbability();
+
+        setTimeout(() => {
+            if (!isGameOverStarted) {
+                isClickCooldown = false;
+                createReadyBall();
+                updateNextPreviewUI();
+            }
+        }, 400); 
+    });
+
+    // Matter.js 공 생성 함수
+    function createBall(x, y, level, isFreshDrop = false) {
+        const p = elementTypes[level];
+        
+        // 반발계수(restitution)와 마찰력(friction) 튜닝
+        const ball = Bodies.circle(x, y, p.radius, {
+            restitution: 0.15,
+            friction: 0.08,
+            frictionAir: 0.015,
+            density: 0.001 * (level + 1), // 단계별 무게 비례감 증가
+            plugin: { 
+                level: level, 
+                symbol: p.symbol, 
+                isGameBall: true, 
+                freshDrop: isFreshDrop 
+            },
+            render: { fillStyle: p.color }
+        });
+
+        if (isFreshDrop) {
+            setTimeout(() => { if (ball.plugin) ball.plugin.freshDrop = false; }, 1000);
+        }
+
+        Composite.add(engine.world, ball);
+        return ball;
+    }
+
+    // [Matter.js 확장] 충돌 이벤트 감지 및 수박 병합 공식 구현
+    Events.on(engine, 'collisionStart', (event) => {
+        if (isGameOverStarted) return;
+        const pairs = event.pairs;
+
+        let mergesToCreate = [];
+
+        for (let i = 0; i < pairs.length; i++) {
+            const pair = pairs[i];
+            const bodyA = pair.bodyA;
+            const bodyB = pair.bodyB;
+
+            // 두 오브젝트가 모두 게임 플레이 공인지 검증
+            if (bodyA.plugin && bodyB.plugin && bodyA.plugin.isGameBall && bodyB.plugin.isGameBall) {
+                // 동일한 레벨 원소 매칭 성공 시
+                if (bodyA.plugin.level === bodyB.plugin.level) {
+                    // 중복 합성 명령 방지 검사
+                    if (!bodyA.toRemove && !bodyB.toRemove) {
+                        bodyA.toRemove = true;
+                        bodyB.toRemove = true;
+
+                        // 중앙점 산출
+                        const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                        const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                        mergesToCreate.push({
+                            x: midX,
+                            y: midY,
+                            nextLevel: bodyA.plugin.level + 1,
+                            bodies: [bodyA, bodyB]
+                        });
+                    }
+                }
+            }
+        }
+
+        // 지연 제거 및 합성체 순차적 배출
+        mergesToCreate.forEach(m => {
+            m.bodies.forEach(b => Composite.remove(engine.world, b));
+
+            if (m.nextLevel >= elementTypes.length) {
+                // 최종 보스 원소 Fe 도달 시 승리 시퀀스 가동
+                triggerWin();
+            } else {
+                createBall(m.x, m.y, m.nextLevel, false);
+            }
+        });
+    });
+
+    // 데드라인 실시간 감시 시스템 루프
+    Events.on(engine, 'afterUpdate', () => {
+        if (isGameOverStarted) return;
+
+        const allBodies = Composite.allBodies(engine.world);
+        let violation = false;
+
+        for (let i = 0; i < allBodies.length; i++) {
+            const b = allBodies[i];
+            if (b.plugin && b.plugin.isGameBall && !b.plugin.freshDrop) {
+                // 공의 최고 꼭대기 y축 좌표가 데드라인을 침범했는지 판정
+                if (b.position.y - b.circleRadius < deadlineY) {
+                    violation = true;
+                    break;
+                }
+            }
+        }
+
+        const now = performance.now();
+        let dt = now - lastTime;
+        if (dt > 100) dt = 16;
+        lastTime = now;
+
+        if (violation) {
+            if (!isAboveDeadline) {
+                isAboveDeadline = true;
+                deadlineUI.classList.add('deadline-active'); 
+            }
+            timeRemaining -= (dt / 1000);
+            if (timeRemaining <= 0) {
+                timeRemaining = 0;
+                deadlineUI.innerText = "------ 0.00 ------";
+                triggerGameOver();
+            } else {
+                deadlineUI.innerText = `------ ${timeRemaining.toFixed(2)} ------`;
+            }
+        } else {
+            if (isAboveDeadline) {
+                isAboveDeadline = false;
+                deadlineUI.classList.remove('deadline-active'); 
+                timeRemaining = 2.00; 
+                deadlineUI.innerText = "---------------- 2.00 ----------------";
+            }
+        }
+    });
+
+    // Matter.js 캔버스 위에 원소 기호 텍스트 주입 렌더링 오버레이
+    Events.on(render, 'afterRender', () => {
+        const context = render.context;
+        const allBodies = Composite.allBodies(engine.world);
+
+        context.font = "bold 14px 'Segoe UI', sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+
+        allBodies.forEach(b => {
+            if (b.plugin && b.plugin.symbol) {
+                // 원소 크기에 맞춘 폰트 스케일링 가변 적용
+                const fontSize = Math.max(11, b.circleRadius * 0.55);
+                context.font = `bold ${fontSize}px 'Segoe UI', sans-serif`;
+                context.fillStyle = "#ffffff";
+                
+                // 회전 물리량에 맞춰 글자도 리얼하게 돌도록 트랜스폼 연산
+                context.save();
+                context.translate(b.position.x, b.position.y);
+                context.rotate(b.angle);
+                context.fillText(b.plugin.symbol, 0, 0);
+                context.restore();
+            }
+        });
+    });
+
+    function triggerWin() {
+        if (isGameOverStarted) return;
+        isGameOverStarted = true;
+        cleanupEndGame();
+        document.getElementById('supernova-screen').style.display = 'flex';
+    }
+
+    function triggerGameOver() {
+        if (isGameOverStarted) return;
+        isGameOverStarted = true;
+        cleanupEndGame();
+        document.getElementById('gameover-screen').style.display = 'flex';
+    }
+
+    function cleanupEndGame() {
+        if (readyBallBody) Composite.remove(engine.world, readyBallBody);
+        nextPreview.innerText = "";
+        nextPreview.style.backgroundColor = "transparent";
+        deadlineUI.style.display = "none";
+    }
+
+    initGame();
+</script>
+</body>
+</html>

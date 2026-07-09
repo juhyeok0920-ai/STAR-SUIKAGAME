@@ -8,6 +8,69 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4850542666629595"
      crossorigin="anonymous"></script>
+    
+    <!-- 🔥 Firebase SDK (v10) 로드 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ⚙️ [필독] 내 Firebase 프로젝트 설정 정보로 반드시 변경하세요!
+        const firebaseConfig = {
+            apiKey: "AIzaSyATIQ9d3dAsSOPhjWOrxOHboyp9oKWm5RU",
+            authDomain: "star-suikagame.firebaseapp.com",
+            projectId: "star-suikagame",
+            storageBucket: "star-suikagame.firebasestorage.app",
+            messagingSenderId: "576338975095",
+            appId: "1:576338975095:web:dbfa9bda937f10f638e972",
+            measurementId: "G-PC3N1T0Z0L"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 전역 스크립트에서 호출할 수 있도록 윈도우 객체에 바인딩
+        window.saveScoreToFirebase = async function(nickname, finalScore) {
+            try {
+                await addDoc(collection(db, "leaderboard"), {
+                    userId: nickname,
+                    score: finalScore,
+                    timestamp: new Date()
+                });
+                console.log("Score saved securely to nebula!");
+                window.loadLeaderboard(); 
+            } catch (e) {
+                console.error("Error adding score to nebula: ", e);
+            }
+        };
+
+        window.loadLeaderboard = async function() {
+            try {
+                const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
+                const listEl = document.getElementById("leaderboard-list");
+                if(!listEl) return;
+                
+                listEl.innerHTML = "";
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const li = document.createElement("div");
+                    li.className = "rank-item";
+                    const displayName = data.userId.length > 8 ? data.userId.substring(0, 7) + '..' : data.userId;
+                    li.innerHTML = `<span>#${rank} ${displayName}</span><span style="font-family:monospace; color:#00ffcc;">${data.score}</span>`;
+                    listEl.appendChild(li);
+                    rank++;
+                });
+                if(rank === 1) {
+                    listEl.innerHTML = "<div style='color:#555; text-align:center; font-size:11px;'>No cosmic records yet.</div>";
+                }
+            } catch (e) {
+                console.error("Error loading leaderboard: ", e);
+            }
+        };
+    </script>
+
     <style>
         body {
             background-color: #0b0c10;
@@ -19,25 +82,27 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            overflow: auto;
+            overflow: x-hidden;
         }
         h1 {
-            margin: 5px 0;
+            margin: 10px 0 2px 0;
             color: #00ffcc;
             font-size: 26px;
             text-shadow: 0 0 10px rgba(0,255,204,0.5);
         }
         .subtitle {
-            font-size: 14px;
+            font-size: 13px;
             color: #c5c6c7;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
+        /* 3단 레이아웃 구성을 위한 메인 래퍼 */
         .game-wrapper {
             display: flex;
-            gap: 25px;
-            align-items: stretch;
-            transition: transform 0.1s ease; /* 진동 효과를 위한 트랜지션 */
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            transition: transform 0.1s ease;
         }
 
         #game-container {
@@ -51,7 +116,6 @@
             overflow: hidden;
         }
 
-        /* Matter.js가 생성할 캔버스 스타일 */
         canvas {
             display: block;
             width: 100%;
@@ -81,73 +145,179 @@
             text-shadow: 0 0 8px #ff0000;
         }
 
+        /* 왼쪽, 오른쪽 사이드 대시보드 공통 스타일 */
         .side-dashboard {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             width: 210px;
         }
 
-        .next-panel {
-            background: #121721;
-            border: 2px solid #00ffcc;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,255,204,0.1);
-        }
-        .panel-title {
-            font-size: 13px;
-            color: #00ffcc;
-            font-weight: bold;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-        #next-preview {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin: 0 auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 14px;
-            box-shadow: inset 0 0 10px rgba(255,255,255,0.4);
-            color: white;
-        }
-
-        .tech-tree-panel {
+        /* 패널 공통 박스 스타일 */
+        .panel-box {
             background: #121721;
             border: 2px solid #1f2833;
-            padding: 15px 12px;
+            padding: 10px;
             border-radius: 10px;
-            flex-grow: 1;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .panel-title {
+            font-size: 11px;
+            color: #c5c6c7;
+            font-weight: bold;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* 스코어 패널 구체화 */
+        .score-panel {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 5px;
+        }
+        .score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .score-num {
+            font-size: 18px;
+            color: #fff;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* 닉네임 패널 */
+        .profile-panel {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
+        #nickname-input {
+            background: #0b0c10;
+            border: 1px solid #333;
+            color: #00ffcc;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #nickname-input:focus {
+            outline: none;
+            border-color: #00ffcc;
+        }
+        #save-nickname-btn {
+            background: #1f2833;
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #save-nickname-btn:hover {
+            background: #333;
+        }
+
+        /* NEXT 패널 */
+        .next-panel {
+            border-color: #00ffcc;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,255,204,0.1);
+        }
+        #next-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 4px auto 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: inset 0 0 8px rgba(255,255,255,0.4);
+            color: white;
+        }
+
+        /* 왼쪽 배치용 진화 가이드 가로 폭 최적화 */
+        .tech-tree-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
         .tech-node {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 5px 8px;
+            gap: 8px;
+            padding: 4px 6px;
             background: rgba(255,255,255,0.03);
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius: 5px;
+            font-size: 11px;
             border-left: 4px solid #fff;
         }
         .tech-circle {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 9px;
             color: white;
             box-shadow: inset 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        /* 실시간 랭킹보드 고정 높이 적용 */
+        .leaderboard-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        #leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            height: 145px; 
+            overflow-y: auto;
+        }
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 3px 5px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* 후원용 버튼 */
+        .donate-panel {
+            text-align: center;
+        }
+        .donate-btn {
+            background: #ffdd00;
+            color: #000;
+            border: none;
+            padding: 6px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        .donate-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
         }
 
         .end-screen {
@@ -178,7 +348,6 @@
             100% { opacity: 1; transform: scale(1); }
         }
 
-        /* 🌌 초신성 효과: 강한 우주 지진 진동 연출 */
         @keyframes mega-shake {
             0% { transform: translate(0, 0) rotate(0deg); }
             10% { transform: translate(-6px, -6px) rotate(-1.5deg); }
@@ -196,7 +365,6 @@
             animation: mega-shake 1.4s cubic-bezier(.36,.07,.19,.97) both;
         }
 
-        /* 💥 초신성 효과: 암전 후 화이트아웃 대폭발 시각 스크린 */
         #supernova-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -207,15 +375,14 @@
         }
         @keyframes flash-burst {
             0% { background: #000; opacity: 1; }
-            15% { background: #ffffff; opacity: 1; filter: blur(4px); } /* 순백의 대폭발 */
-            40% { background: #ff007f; opacity: 0.8; } /* 초신성 에너지 컬러 확장 */
+            15% { background: #ffffff; opacity: 1; filter: blur(4px); } 
+            40% { background: #ff007f; opacity: 0.8; } 
             100% { background: transparent; opacity: 0; }
         }
         .supernova-flash {
             animation: flash-burst 2.2s ease-out forwards;
         }
 
-        /* 🔗 공유 버튼 스타일 패널 */
         .share-container {
             margin-top: 20px;
             display: flex;
@@ -252,13 +419,36 @@
 </head>
 <body>
 
-    <!-- 초신성 이펙트용 암전/섬광 오버레이 레이어 -->
     <div id="supernova-overlay"></div>
 
     <h1> ✨ STAR-SUIKAGAME ✨ </h1>
     <div class="subtitle">Refreshing the page resets your progress.</div>
 
+    <!-- 🌟 왼쪽/가운데/오른쪽 3단 정렬 구조 래퍼 -->
     <div class="game-wrapper" id="game-visual-wrapper">
+        
+        <!-- [LEFT SIDE] 진화 가이드 배치 -->
+        <div class="side-dashboard">
+            <!-- 🔮 NEXT 예고 패널 -->
+            <div class="panel-box next-panel">
+                <div class="panel-title" style="margin-bottom: 0;">NEXT</div>
+                <div id="next-preview"></div>
+            </div>
+            
+            <div class="panel-box tech-tree-panel">
+                <div class="panel-title" style="color: #66fcf1; text-align: center; border-bottom: 1px solid #1f2833; padding-bottom: 3px; margin-bottom: 3px;">STELLAR EVOLUTION</div>
+                <div class="tech-node" style="border-color: #ff4d4d;"><div class="tech-circle" style="background:#ff4d4d">H</div> H Hydrogen </div>
+                <div class="tech-node" style="border-color: #ff9f43;"><div class="tech-circle" style="background:#ff9f43">He</div> He Helium </div>
+                <div class="tech-node" style="border-color: #f1c40f;"><div class="tech-circle" style="background:#f1c40f">C</div> C Carbon </div>
+                <div class="tech-node" style="border-color: #2ecc71;"><div class="tech-circle" style="background:#2ecc71">O</div> O Oxygen </div>
+                <div class="tech-node" style="border-color: #00d2d3;"><div class="tech-circle" style="background:#00d2d3">Ne</div> Ne Neon </div>
+                <div class="tech-node" style="border-color: #ff9ff3;"><div class="tech-circle" style="background:#ff9ff3">Mg</div> Mg Magnesium </div>
+                <div class="tech-node" style="border-color: #3498db;"><div class="tech-circle" style="background:#3498db">Si</div> Si Silicon </div>
+                <div class="tech-node" style="border-color: #9b59b6;"><div class="tech-circle" style="background:#9b59b6">Fe</div> Fe Iron </div>
+            </div>
+        </div>
+
+        <!-- [CENTER] 메인 게임 스크린 -->
         <div id="game-container">
             <div class="deadline-container" id="deadline-ui">---------------- 2.00 ----------------</div>
 
@@ -272,7 +462,6 @@
                 </p>
                 <button onclick="location.reload()" style="background:#00ffcc; color:#0b0c10; border:none; padding:12px 30px; font-weight:bold; cursor:pointer; border-radius:5px; margin-top:20px; font-size:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">CREATE NEW SPACE</button>
                 
-                <!-- 초신성 성공 공유 버튼 추가 -->
                 <div class="share-container">
                     <button class="share-btn twitter" onclick="shareToX(true)">𝕏 Share</button>
                     <button class="share-btn" id="copy-btn-win" onclick="copyGameLink(true)">📋 Copy Link</button>
@@ -289,7 +478,6 @@
                 </p>
                 <button onclick="location.reload()" style="background:#ff4d4d; color:#fff; border:none; padding:12px 30px; font-weight:bold; cursor:pointer; border-radius:5px; margin-top:20px; font-size:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">REBOOT</button>
                 
-                <!-- 게임오버 공유 버튼 추가 -->
                 <div class="share-container">
                     <button class="share-btn twitter" onclick="shareToX(false)">𝕏 Share</button>
                     <button class="share-btn" id="copy-btn-fail" onclick="copyGameLink(false)">📋 Copy Link</button>
@@ -297,40 +485,59 @@
             </div>
         </div>
 
+        <!-- [RIGHT SIDE] 점수 / 닉네임 / NEXT / 랭킹 / 후원 패널 -->
         <div class="side-dashboard">
-            <div class="next-panel">
-                <div class="panel-title">NEXT</div>
-                <div id="next-preview"></div>
+            <!-- 📊 스코어 패널 -->
+            <div class="panel-box score-panel">
+                <div class="score-box">
+                    <span class="panel-title" style="margin-bottom:0;">SCORE</span>
+                    <span class="score-num" id="current-score">0</span>
+                </div>
+                <div style="width: 1px; background: #1f2833; height: 30px; align-self: center;"></div>
+                <div class="score-box">
+                    <span class="panel-title" style="margin-bottom:0;">BEST</span>
+                    <span class="score-num" id="best-score">0</span>
+                </div>
             </div>
 
-            <div class="tech-tree-panel">
-                <div class="panel-title" style="color: #66fcf1; text-align: center; border-bottom: 1px solid #1f2833; padding-bottom: 3px; margin-bottom: 3px;">STELLAR EVOLUTION</div>
-                <div class="tech-node" style="border-color: #ff4d4d;"><div class="tech-circle" style="background:#ff4d4d">H</div> H Hydrogen </div>
-                <div class="tech-node" style="border-color: #ff9f43;"><div class="tech-circle" style="background:#ff9f43">He</div> He Helium </div>
-                <div class="tech-node" style="border-color: #f1c40f;"><div class="tech-circle" style="background:#f1c40f">C</div> C Carbon </div>
-                <div class="tech-node" style="border-color: #2ecc71;"><div class="tech-circle" style="background:#2ecc71">O</div> O Oxygen </div>
-                <div class="tech-node" style="border-color: #00d2d3;"><div class="tech-circle" style="background:#00d2d3">Ne</div> Ne Neon </div>
-                <div class="tech-node" style="border-color: #ff9ff3;"><div class="tech-circle" style="background:#ff9ff3">Mg</div> Mg Magnesium </div>
-                <div class="tech-node" style="border-color: #3498db;"><div class="tech-circle" style="background:#3498db">Si</div> Si Silicon </div>
-                <div class="tech-node" style="border-color: #9b59b6;"><div class="tech-circle" style="background:#9b59b6">Fe</div> Fe Iron </div>
-                <div class="tech-node" style="border-color: #333333; color: #555555;"><div class="tech-circle" style="background: #111111; color: #ffb74d; border: 1px dashed #555555;">❓</div> Unknown Cosmic Mystery (???)</div>
+            <!-- 🆔 닉네임 설정 패널 -->
+            <div class="panel-box profile-panel">
+                <div class="panel-title" style="margin-bottom: 2px;">RANKING NICKNAME</div>
+                <input type="text" id="nickname-input" placeholder="Letters/Numbers only" maxlength="10">
+                <button id="save-nickname-btn" onclick="saveNickname()">Set Nickname</button>
+            </div>
+
+            <!-- 🏆 실시간 탑 10 랭킹 패널 -->
+            <div class="panel-box leaderboard-panel">
+                <div class="panel-title" style="color: #66fcf1;">GLOBAL TOP 10</div>
+                <div id="leaderboard-list">
+                    <div style="color:#555; text-align:center; font-size:11px;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- ☕ 후원 패널 -->
+            <div class="panel-box donate-panel">
+                <div class="panel-title" style="margin-bottom: 4px;">SUPPORT DEVELOPER</div>
+                <a href="https://www.buymeacoffee.com/" target="_blank" class="donate-btn">☕ Buy Me a Coffee</a>
             </div>
         </div>
     </div>
 
 <script>
-    // Matter.js 모듈 추출
     const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
     const container = document.getElementById('game-container');
     const nextPreview = document.getElementById('next-preview');
     const deadlineUI = document.getElementById('deadline-ui');
     
+    const currentScoreUI = document.getElementById('current-score');
+    const bestScoreUI = document.getElementById('best-score');
+    const nicknameInput = document.getElementById('nickname-input');
+
     const containerWidth = 420;
     const containerHeight = 650;
     const deadlineY = 120; 
 
-    // 원소 프리셋 데이터
     const elementTypes = [
         { level: 0, symbol: "H",  radius: 15,  color: "#ff4d4d" },
         { level: 1, symbol: "He", radius: 26,  color: "#ff9f43" },
@@ -342,12 +549,8 @@
         { level: 7, symbol: "Fe", radius: 115, color: "#9b59b6" }
     ];
 
-    // 물리 엔진 모듈 초기화
-    const engine = Engine.create({
-        gravity: { y: 0.9, x: 0 } // 중력 설정
-    });
+    const engine = Engine.create({ gravity: { y: 0.9, x: 0 } });
 
-    // 렌더러 설정 (원소 텍스트를 커스텀해서 그리기 위해 특별 세팅)
     const render = Render.create({
         element: container,
         engine: engine,
@@ -355,7 +558,7 @@
             width: containerWidth,
             height: containerHeight,
             background: 'transparent',
-            wireframes: false // 솔리드 컬러 채우기 활성화
+            wireframes: false
         }
     });
 
@@ -363,24 +566,46 @@
     const runner = Runner.create();
     Runner.run(runner, engine);
 
-    // 1. 벽면 에지 월 배치 (두께 50px로 뚫림 버그 예방)
     const wallOptions = { isStatic: true, render: { fillStyle: '#1f2833' }, friction: 0.1 };
     const ground = Bodies.rectangle(containerWidth / 2, containerHeight + 25, containerWidth, 50, wallOptions);
     const leftWall = Bodies.rectangle(-25, containerHeight / 2, 50, containerHeight, wallOptions);
     const rightWall = Bodies.rectangle(containerWidth + 25, containerHeight / 2, 50, containerHeight, wallOptions);
     Composite.add(engine.world, [ground, leftWall, rightWall]);
 
-    // 전역 상태 변수
     let currentLevel = 0; 
     let nextLevel = 0;
     let isClickCooldown = false;
     let isGameOverStarted = false; 
-    let readyBallBody = null; // 마우스 따라다니는 가상 공
+    let readyBallBody = null; 
     let currentMouseX = containerWidth / 2;
 
     let isAboveDeadline = false;
     let timeRemaining = 2.00;
     let lastTime = performance.now();
+
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('star_suika_best') || '0');
+    
+    let currentNickname = localStorage.getItem('star_suika_nickname');
+    if (!currentNickname) {
+        currentNickname = "User_" + Math.random().toString(36).substring(2, 6).toUpperCase();
+        localStorage.setItem('star_suika_nickname', currentNickname);
+    }
+    nicknameInput.value = currentNickname;
+
+    function saveNickname() {
+        const newNickname = nicknameInput.value.trim();
+        const regex = /^[a-zA-Z0-9\s]{2,10}$/;
+        if (regex.test(newNickname)) {
+            currentNickname = newNickname;
+            localStorage.setItem('star_suika_nickname', currentNickname);
+            alert("Nickname set to: " + currentNickname);
+            nicknameInput.blur();
+        } else {
+            alert("Invalid Nickname.\nUse 2-10 English letters or numbers only.");
+            nicknameInput.value = currentNickname;
+        }
+    }
 
     function getRandomLevelByProbability() {
         const rand = Math.random() * 100;
@@ -390,27 +615,28 @@
     }
 
     function initGame() {
+        score = 0;
+        currentScoreUI.innerText = score;
+        bestScoreUI.innerText = bestScore;
+
         currentLevel = getRandomLevelByProbability(); 
         nextLevel = getRandomLevelByProbability();
         createReadyBall();
         updateNextPreviewUI();
+        
+        setTimeout(() => { if (window.loadLeaderboard) window.loadLeaderboard(); }, 1000);
     }
 
-    // 마우스 조준용 가상 가이드 바디 생성
     function createReadyBall() {
         if (isGameOverStarted) return;
         if (readyBallBody) Composite.remove(engine.world, readyBallBody);
 
         const p = elementTypes[currentLevel];
-        // 충돌하지 않도록 센서(isSensor) 옵션과 중력 배제 처리
         readyBallBody = Bodies.circle(currentMouseX, 45, p.radius, {
             isSensor: true,
             isStatic: true,
             plugin: { level: currentLevel, symbol: p.symbol, isGameBall: false },
-            render: {
-                fillStyle: p.color,
-                opacity: 0.8
-            }
+            render: { fillStyle: p.color, opacity: 0.8 }
         });
         Composite.add(engine.world, readyBallBody);
     }
@@ -420,10 +646,8 @@
         const p = elementTypes[nextLevel];
         nextPreview.style.backgroundColor = p.color;
         nextPreview.innerText = p.symbol;
-        nextPreview.style.fontSize = "15px";
     }
 
-    // 마우스 조준 이동 추적
     container.addEventListener('mousemove', (e) => {
         if (isGameOverStarted || isClickCooldown || !readyBallBody) return; 
         const rect = container.getBoundingClientRect();
@@ -434,14 +658,12 @@
         Body.setPosition(readyBallBody, { x: currentMouseX, y: 45 });
     });
 
-    // 클릭 시 투하 물리 바디 생성
     container.addEventListener('click', () => {
+        if (document.activeElement === nicknameInput) return;
         if (isClickCooldown || isGameOverStarted || !readyBallBody) return;
 
-        // 실제 가혹 마찰력이 적용된 물리 공 낙하
         createBall(readyBallBody.position.x, 75, currentLevel, true);
 
-        // 조준 공 일시 투명화 및 쿨다운
         isClickCooldown = true;
         Composite.remove(engine.world, readyBallBody);
         readyBallBody = null;
@@ -458,22 +680,14 @@
         }, 400); 
     });
 
-    // Matter.js 공 생성 함수
     function createBall(x, y, level, isFreshDrop = false) {
         const p = elementTypes[level];
-        
-        // 반발계수(restitution)와 마찰력(friction) 튜닝
         const ball = Bodies.circle(x, y, p.radius, {
             restitution: 0.15,
             friction: 0.08,
             frictionAir: 0.015,
-            density: 0.001 * (level + 1), // 단계별 무게 비례감 증가
-            plugin: { 
-                level: level, 
-                symbol: p.symbol, 
-                isGameBall: true, 
-                freshDrop: isFreshDrop 
-            },
+            density: 0.001 * (level + 1),
+            plugin: { level: level, symbol: p.symbol, isGameBall: true, freshDrop: isFreshDrop },
             render: { fillStyle: p.color }
         });
 
@@ -485,11 +699,9 @@
         return ball;
     }
 
-    // [Matter.js 확장] 충돌 이벤트 감지 및 수박 병합 공식 구현
     Events.on(engine, 'collisionStart', (event) => {
         if (isGameOverStarted) return;
         const pairs = event.pairs;
-
         let mergesToCreate = [];
 
         for (let i = 0; i < pairs.length; i++) {
@@ -497,16 +709,12 @@
             const bodyA = pair.bodyA;
             const bodyB = pair.bodyB;
 
-            // 두 오브젝트가 모두 게임 플레이 공인지 검증
             if (bodyA.plugin && bodyB.plugin && bodyA.plugin.isGameBall && bodyB.plugin.isGameBall) {
-                // 동일한 레벨 원소 매칭 성공 시
                 if (bodyA.plugin.level === bodyB.plugin.level) {
-                    // 중복 합성 명령 방지 검사
                     if (!bodyA.toRemove && !bodyB.toRemove) {
                         bodyA.toRemove = true;
                         bodyB.toRemove = true;
 
-                        // 중앙점 산출
                         const midX = (bodyA.position.x + bodyB.position.x) / 2;
                         const midY = (bodyA.position.y + bodyB.position.y) / 2;
 
@@ -521,12 +729,18 @@
             }
         }
 
-        // 지연 제거 및 합성체 순차적 배출
         mergesToCreate.forEach(m => {
             m.bodies.forEach(b => Composite.remove(engine.world, b));
+            score += m.nextLevel * 2;
+            currentScoreUI.innerText = score;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestScoreUI.innerText = bestScore;
+                localStorage.setItem('star_suika_best', bestScore.toString());
+            }
 
             if (m.nextLevel >= elementTypes.length) {
-                // 최종 보스 원소 Fe 두 개가 충돌하면 -> 초신성 폭발 연출 후 승리 시퀀스 가동
                 triggerWin();
             } else {
                 createBall(m.x, m.y, m.nextLevel, false);
@@ -534,7 +748,6 @@
         });
     });
 
-    // 데드라인 실시간 감시 시스템 루프
     Events.on(engine, 'afterUpdate', () => {
         if (isGameOverStarted) return;
 
@@ -544,7 +757,6 @@
         for (let i = 0; i < allBodies.length; i++) {
             const b = allBodies[i];
             if (b.plugin && b.plugin.isGameBall && !b.plugin.freshDrop) {
-                // 공의 최고 꼭대기 y축 좌표가 데드라인을 침범했는지 판정
                 if (b.position.y - b.circleRadius < deadlineY) {
                     violation = true;
                     break;
@@ -580,23 +792,19 @@
         }
     });
 
-    // Matter.js 캔버스 위에 원소 기호 텍스트 주입 렌더링 오버레이
     Events.on(render, 'afterRender', () => {
         const context = render.context;
         const allBodies = Composite.allBodies(engine.world);
 
-        context.font = "bold 14px 'Segoe UI', sans-serif";
         context.textAlign = "center";
         context.textBaseline = "middle";
 
         allBodies.forEach(b => {
             if (b.plugin && b.plugin.symbol) {
-                // 원소 크기에 맞춘 폰트 스케일링 가변 적용
                 const fontSize = Math.max(11, b.circleRadius * 0.55);
                 context.font = `bold ${fontSize}px 'Segoe UI', sans-serif`;
                 context.fillStyle = "#ffffff";
                 
-                // 회전 물리량에 맞춰 글자도 리얼하게 돌도록 트랜스폼 연산
                 context.save();
                 context.translate(b.position.x, b.position.y);
                 context.rotate(b.angle);
@@ -611,17 +819,14 @@
         isGameOverStarted = true;
         cleanupEndGame();
 
-        // 💥 초신성 대폭발 연출 활성화
         const visualWrapper = document.getElementById('game-visual-wrapper');
         const overlay = document.getElementById('supernova-overlay');
 
-        // 1. 게임판 전체를 흔드는 우주 지진 연출 (1.4초)
         visualWrapper.classList.add('supernova-shake');
-
-        // 2. 순간 암전 후 순백의 섬광 폭발 스크린 활성화
         overlay.classList.add('supernova-flash');
 
-        // 3. 연출이 정점에 달하는 시점(1.2초 후)에 보스 승리 스크린 오픈
+        if (window.saveScoreToFirebase) window.saveScoreToFirebase(currentNickname, score);
+
         setTimeout(() => {
             document.getElementById('supernova-screen').style.display = 'flex';
             visualWrapper.classList.remove('supernova-shake');
@@ -632,6 +837,9 @@
         if (isGameOverStarted) return;
         isGameOverStarted = true;
         cleanupEndGame();
+        
+        if (window.saveScoreToFirebase) window.saveScoreToFirebase(currentNickname, score);
+
         document.getElementById('gameover-screen').style.display = 'flex';
     }
 
@@ -642,14 +850,13 @@
         deadlineUI.style.display = "none";
     }
 
-    // 🌐 글로벌 공유용 자바스크립트 함수 추가
     function shareToX(isWin) {
         const gameUrl = window.location.href;
         let text = "";
         if (isWin) {
-            text = "💥 I triggered a massive SUPERNOVA by fusing Iron(Fe) cores in STAR-SUIKAGAME! Can you beat this celestial evolution? ✨\nPlay here: ";
+            text = `💥 I triggered a massive SUPERNOVA with ${score} points in STAR-SUIKAGAME! Can you beat this celestial evolution? ✨\nPlay here: `;
         } else {
-            text = "🌌 My star just collapsed into a Black Hole in STAR-SUIKAGAME! Watch out for the gravitational limit! 🛸\nPlay here: ";
+            text = `🌌 My star just collapsed into a Black Hole at ${score} points in STAR-SUIKAGAME! Try to cross the gravitational limit! 🛸\nPlay here: `;
         }
         const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(gameUrl)}`;
         window.open(xUrl, '_blank');
@@ -663,9 +870,7 @@
         navigator.clipboard.writeText(gameUrl).then(() => {
             const originalText = btn.innerHTML;
             btn.innerHTML = "✅ Copied!";
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-            }, 2000);
+            setTimeout(() => { btn.innerHTML = originalText; }, 2000);
         }).catch(err => {
             alert("Failed to copy link. Please copy the URL manually!");
         });
@@ -676,11 +881,10 @@
 <p> drag down to view the guide </p>
 <br>
 <br>
-<!-- 구글 애드센스 승인용 및 해외 유저용 영어 가이드 (기존 게임 화면을 방해하지 않음) -->
 <div style="
     max-width: 800px; 
-    margin: 50px auto 20px auto; 
-    padding: 30px; 
+    margin: 30px auto 20px auto; 
+    padding: 25px; 
     background-color: rgba(20, 20, 25, 0.8); 
     border: 1px solid #333; 
     border-radius: 12px; 
@@ -697,27 +901,12 @@
         Combine cosmic elements, discover stars, and evolve your own miniature universe in this highly addictive browser game!
     </p>
     
-    <h3 style="color: #ffb74d; margin-top: 25px;">🎮 How to Play</h3>
+    <h3 style="color: #ffb74d; margin-top: 20px;">🎮 How to Play</h3>
     <ul style="padding-left: 20px;">
         <li style="margin-bottom: 8px;"><strong>Aim and Drop:</strong> Click on your screen or tap on mobile to drop the cosmic element at your desired horizontal location.</li>
         <li style="margin-bottom: 8px;"><strong>Merge and Evolve:</strong> When two elements of the exact same type collide, they will automatically merge and evolve into a larger, next-level celestial body.</li>
         <li style="margin-bottom: 8px;"><strong>Game Over:</strong> Be careful not to let the floating elements cross the warning line at the top of the container. Keep your screen clean to score higher!</li>
     </ul>
-
-    <h3 style="color: #ffb74d; margin-top: 25px;">🚀 Key Features</h3>
-    <ul style="padding-left: 20px;">
-        <li style="margin-bottom: 8px;"><strong>Realistic 2D Physics:</strong> Built with the Matter.js physics library, creating satisfying gravity, collisions, and friction between cosmic particles.</li>
-        <li style="margin-bottom: 8px;"><strong>Stellar Evolution:</strong> Watch your tiny stardust turn into massive stars and black holes as you continuous merge them.</li>
-        <li style="margin-bottom: 8px;"><strong>Instant Play:</strong> No downloads, no sign-ups required. Fully optimized for both desktop browsers and mobile devices.</li>
-    </ul>
-
-    <h3 style="color: #ffb74d; margin-top: 25px;">⚙️ Patch Notes & Updates</h3>
-    <p style="font-size: 14px; color: #aaa; background: #111; padding: 10px; border-radius: 6px;">
-        <strong>v1.0.0 (Latest Update)</strong><br>
-        - Successfully deployed the space-themed Suika Game engine via Vercel.<br>
-        - Integrated smooth canvas rendering and stable 2D physics system.<br>
-        - Added interactive cosmic element graphics for global players.
-    </p>
 </div>
 </body>
 </html>

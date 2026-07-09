@@ -51,4 +51,4 @@
 
 1. 이 저장소를 클론하거나 코드를 다운로드합니다.
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/star-suika-game.git](https://github.com/YOUR_USERNAME/star-suika-game.git)
+   git clone [https://github.com/juhyeok0920-ai/star-suika-game.git](https://github.com/juhyeok0920-ai/star-suika-game.git)

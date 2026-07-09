@@ -37,6 +37,7 @@
             display: flex;
             gap: 25px;
             align-items: stretch;
+            transition: transform 0.1s ease; /* 진동 효과를 위한 트랜지션 */
         }
 
         #game-container {
@@ -176,14 +177,54 @@
             0% { opacity: 0; transform: scale(0.8); }
             100% { opacity: 1; transform: scale(1); }
         }
+
+        /* 🌌 초신성 효과: 강한 우주 지진 진동 연출 */
+        @keyframes mega-shake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-6px, -6px) rotate(-1.5deg); }
+            20% { transform: translate(6px, 6px) rotate(1.5deg); }
+            30% { transform: translate(-10px, 6px) rotate(-2.5deg); }
+            40% { transform: translate(10px, -6px) rotate(2.5deg); }
+            50% { transform: translate(-6px, 10px) rotate(-1.5deg); }
+            60% { transform: translate(6px, -10px) rotate(1.5deg); }
+            70% { transform: translate(-10px, -6px) rotate(-2.5deg); }
+            80% { transform: translate(10px, 6px) rotate(2.5deg); }
+            90% { transform: translate(-6px, 6px) rotate(0deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .supernova-shake {
+            animation: mega-shake 1.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* 💥 초신성 효과: 암전 후 화이트아웃 대폭발 시각 스크린 */
+        #supernova-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 99999;
+        }
+        @keyframes flash-burst {
+            0% { background: #000; opacity: 1; }
+            15% { background: #ffffff; opacity: 1; filter: blur(4px); } /* 순백의 대폭발 */
+            40% { background: #ff007f; opacity: 0.8; } /* 초신성 에너지 컬러 확장 */
+            100% { background: transparent; opacity: 0; }
+        }
+        .supernova-flash {
+            animation: flash-burst 2.2s ease-out forwards;
+        }
     </style>
 </head>
 <body>
 
+    <!-- 초신성 이펙트용 암전/섬광 오버레이 레이어 -->
+    <div id="supernova-overlay"></div>
+
     <h1> ✨ STAR-SUIKAGAME ✨ </h1>
     <div class="subtitle">Refreshing the page resets your progress.</div>
 
-    <div class="game-wrapper">
+    <div class="game-wrapper" id="game-visual-wrapper">
         <div id="game-container">
             <div class="deadline-container" id="deadline-ui">---------------- 2.00 ----------------</div>
 
@@ -226,6 +267,7 @@
                 <div class="tech-node" style="border-color: #ff9ff3;"><div class="tech-circle" style="background:#ff9ff3">Mg</div> Mg Magnesium </div>
                 <div class="tech-node" style="border-color: #3498db;"><div class="tech-circle" style="background:#3498db">Si</div> Si Silicon </div>
                 <div class="tech-node" style="border-color: #9b59b6;"><div class="tech-circle" style="background:#9b59b6">Fe</div> Fe Iron </div>
+                <div class="tech-node" style="border-color: #333333; color: #555555;"><div class="tech-circle" style="background: #111111; color: #ffb74d; border: 1px dashed #555555;">❓</div> Unknown Cosmic Mystery (???)</div>
             </div>
         </div>
     </div>
@@ -438,7 +480,7 @@
             m.bodies.forEach(b => Composite.remove(engine.world, b));
 
             if (m.nextLevel >= elementTypes.length) {
-                // 최종 보스 원소 Fe 도달 시 승리 시퀀스 가동
+                // 최종 보스 원소 Fe 두 개가 충돌하면 -> 초신성 폭발 연출 후 승리 시퀀스 가동
                 triggerWin();
             } else {
                 createBall(m.x, m.y, m.nextLevel, false);
@@ -522,7 +564,22 @@
         if (isGameOverStarted) return;
         isGameOverStarted = true;
         cleanupEndGame();
-        document.getElementById('supernova-screen').style.display = 'flex';
+
+        // 💥 초신성 대폭발 연출 활성화
+        const visualWrapper = document.getElementById('game-visual-wrapper');
+        const overlay = document.getElementById('supernova-overlay');
+
+        // 1. 게임판 전체를 흔드는 우주 지진 연출 (1.4초)
+        visualWrapper.classList.add('supernova-shake');
+
+        // 2. 순간 암전 후 순백의 섬광 폭발 스크린 활성화
+        overlay.classList.add('supernova-flash');
+
+        // 3. 연출이 정점에 달하는 시점(1.2초 후)에 보스 승리 스크린 오픈
+        setTimeout(() => {
+            document.getElementById('supernova-screen').style.display = 'flex';
+            visualWrapper.classList.remove('supernova-shake');
+        }, 1200);
     }
 
     function triggerGameOver() {

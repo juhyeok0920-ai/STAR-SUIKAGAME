@@ -47,8 +47,7 @@
 <br>
 
 ## 🚀 실행 방법 (How to Run)
-별도의 빌드나 서버 설치 과정이 필요하지 않습니다.
 
-1. 이 저장소를 클론하거나 코드를 다운로드합니다.
+1. 주소 입력
    ```bash
-   git clone [https://github.com/juhyeok0920-ai/star-suika-game.git](https://github.com/juhyeok0920-ai/star-suika-game.git)
+   https://juhyeok0920-ai.github.io/STAR-SUIKAGAME/

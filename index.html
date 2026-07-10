@@ -119,6 +119,9 @@
 
         canvas {
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             image-rendering: optimizeQuality;
@@ -609,9 +612,10 @@
     createBounds();
 
     function resizeGame() {
-        const rect = container.getBoundingClientRect();
-        containerWidth = Math.max(200, Math.round(rect.width));
-        containerHeight = Math.max(200, Math.round(rect.height));
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        containerWidth = Math.max(200, Math.round(cw));
+        containerHeight = Math.max(200, Math.round(ch));
         deadlineY = 120 * (containerHeight / 650);
 
         const ratio = window.devicePixelRatio || 1;

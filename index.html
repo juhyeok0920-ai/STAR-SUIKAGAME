@@ -155,20 +155,25 @@
             width: 210px;
         }
 
-        /* 반응형: 작은 화면에서는 세로 스택으로 전환 */
+        /* 반응형: 작은 화면에서는 가로 스크롤 허용하여 좌우 사이드바를 함께 표시 */
         @media (max-width: 900px) {
             .game-wrapper {
-                flex-direction: column;
+                flex-direction: row;
                 gap: 12px;
-                align-items: center;
+                align-items: flex-start;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 8px 6px;
             }
             .side-dashboard {
-                width: min(92vw, 210px);
-                order: 2;
+                flex: 0 0 min(28vw, 210px);
+                width: min(28vw, 210px);
+                order: 0;
             }
             #game-container {
-                order: 1;
-                width: min(96vw, 420px);
+                flex: 0 0 min(44vw, 420px);
+                width: min(44vw, 420px);
+                order: 0;
             }
             .panel-box { width: 100%; box-sizing: border-box; }
         }

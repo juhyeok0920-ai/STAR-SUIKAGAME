@@ -107,19 +107,21 @@
 
         #game-container {
             position: relative;
-            width: 420px;
-            height: 650px;
+            width: min(92vw, 420px);
+            aspect-ratio: 420 / 650;
             border: 4px solid #1f2833;
             background: radial-gradient(circle, #151922 0%, #0b0c10 100%);
             border-radius: 12px;
             box-shadow: 0 0 30px rgba(0,255,204,0.15);
             overflow: hidden;
+            max-height: 92vh;
         }
 
         canvas {
             display: block;
             width: 100%;
             height: 100%;
+            image-rendering: optimizeQuality;
         }
 
         .deadline-container {
@@ -151,6 +153,24 @@
             flex-direction: column;
             gap: 12px;
             width: 210px;
+        }
+
+        /* 반응형: 작은 화면에서는 세로 스택으로 전환 */
+        @media (max-width: 900px) {
+            .game-wrapper {
+                flex-direction: column;
+                gap: 12px;
+                align-items: center;
+            }
+            .side-dashboard {
+                width: min(92vw, 210px);
+                order: 2;
+            }
+            #game-container {
+                order: 1;
+                width: min(96vw, 420px);
+            }
+            .panel-box { width: 100%; box-sizing: border-box; }
         }
 
         /* 패널 공통 박스 스타일 */
@@ -534,9 +554,9 @@
     const bestScoreUI = document.getElementById('best-score');
     const nicknameInput = document.getElementById('nickname-input');
 
-    const containerWidth = 420;
-    const containerHeight = 650;
-    const deadlineY = 120; 
+    let containerWidth = container.clientWidth || 420;
+    let containerHeight = container.clientHeight || 650;
+    let deadlineY = 120 * (containerHeight / 650);
 
     const elementTypes = [
         { level: 0, symbol: "H",  radius: 15,  color: "#ff4d4d" },
@@ -567,10 +587,47 @@
     Runner.run(runner, engine);
 
     const wallOptions = { isStatic: true, render: { fillStyle: '#1f2833' }, friction: 0.1 };
-    const ground = Bodies.rectangle(containerWidth / 2, containerHeight + 25, containerWidth, 50, wallOptions);
-    const leftWall = Bodies.rectangle(-25, containerHeight / 2, 50, containerHeight, wallOptions);
-    const rightWall = Bodies.rectangle(containerWidth + 25, containerHeight / 2, 50, containerHeight, wallOptions);
-    Composite.add(engine.world, [ground, leftWall, rightWall]);
+    let ground, leftWall, rightWall;
+
+    function createBounds() {
+        // remove previous bounds if any
+        try { if (ground) Composite.remove(engine.world, ground); } catch(e) {}
+        try { if (leftWall) Composite.remove(engine.world, leftWall); } catch(e) {}
+        try { if (rightWall) Composite.remove(engine.world, rightWall); } catch(e) {}
+
+        ground = Bodies.rectangle(containerWidth / 2, containerHeight + 25, containerWidth, 50, wallOptions);
+        leftWall = Bodies.rectangle(-25, containerHeight / 2, 50, containerHeight, wallOptions);
+        rightWall = Bodies.rectangle(containerWidth + 25, containerHeight / 2, 50, containerHeight, wallOptions);
+        Composite.add(engine.world, [ground, leftWall, rightWall]);
+    }
+
+    createBounds();
+
+    function resizeGame() {
+        const rect = container.getBoundingClientRect();
+        containerWidth = Math.max(200, Math.round(rect.width));
+        containerHeight = Math.max(200, Math.round(rect.height));
+        deadlineY = 120 * (containerHeight / 650);
+
+        const ratio = window.devicePixelRatio || 1;
+        // style size (CSS pixels)
+        render.canvas.style.width = containerWidth + 'px';
+        render.canvas.style.height = containerHeight + 'px';
+        // actual backing store size for crisp rendering
+        render.canvas.width = Math.round(containerWidth * ratio);
+        render.canvas.height = Math.round(containerHeight * ratio);
+        render.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+        render.options.width = containerWidth;
+        render.options.height = containerHeight;
+
+        // recreate bounds to match new size
+        createBounds();
+    }
+
+    window.addEventListener('resize', resizeGame);
+    // initial resize to ensure correct pixel ratio
+    setTimeout(resizeGame, 0);
 
     let currentLevel = 0; 
     let nextLevel = 0;

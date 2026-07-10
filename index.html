@@ -158,24 +158,26 @@
             width: 210px;
         }
 
-        /* 반응형: 작은 화면에서는 가로 스크롤 허용하여 좌우 사이드바를 함께 표시 */
+        /* 반응형: 작은 화면에서는 메인 화면은 유지, 사이드바 축소 */
         @media (max-width: 900px) {
             .game-wrapper {
                 flex-direction: row;
-                gap: 12px;
+                gap: 10px;
                 align-items: flex-start;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                padding: 8px 6px;
+                padding: 6px 6px;
             }
+            /* 사이드바를 더 작게 해서 메인 게임 화면이 중심에 보이게 함 */
             .side-dashboard {
-                flex: 0 0 min(28vw, 210px);
-                width: min(28vw, 210px);
+                flex: 0 0 min(18vw, 120px);
+                width: min(18vw, 120px);
                 order: 0;
             }
+            /* 메인 컨테이너는 최대 420px 유지, 화면이 좁을 땐 우선권 부여 */
             #game-container {
-                flex: 0 0 min(44vw, 420px);
-                width: min(44vw, 420px);
+                flex: 0 0 min(64vw, 420px);
+                width: min(64vw, 420px);
                 order: 0;
             }
             .panel-box { width: 100%; box-sizing: border-box; }

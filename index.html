@@ -445,9 +445,43 @@
         .share-btn.twitter:hover {
             background: #222;
         }
+        .bottom-box {
+            max-width: 800px; 
+            margin: 30px auto 20px auto; 
+            padding: 25px; 
+            background-color: rgba(20, 20, 25, 0.8); 
+            border: 1px solid #333; 
+            border-radius: 12px; 
+            color: #e0e0e0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
+    <!-- 패치 노트 모달 팝업 -->
+<div id="patch-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 999999; justify-content: center; align-items: center;">
+    <div style="background: #121721; border: 2px solid #00ffcc; width: min(90vw, 400px); max-height: 70vh; border-radius: 12px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; box-shadow: 0 0 25px rgba(0,255,204,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2833; padding-bottom: 8px; margin-bottom: 12px;">
+            <span style="font-weight: bold; color: #00ffcc; font-size: 16px;">🚀 PATCH NOTES</span>
+            <span onclick="closePatchNotes()" style="color: #555; cursor: pointer; font-size: 20px; font-weight: bold;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='#555'">&times;</span>
+        </div>
+        
+        <!-- 패치 노트 내용 (스크롤 가능) -->
+        <div style="overflow-y: auto; flex: 1; font-size: 13px; color: #c5c6c7; line-height: 1.6; padding-right: 5px; text-align: left;">
+            <h4 style="margin: 0 0 5px 0; color: #fff;">v1.1.0 (2026-07-13)</h4>
+            <ul style="margin: 0 0 15px 0; padding-left: 20px;">
+                <li><b style="color: #2ecc71;">[Added]</b> global real-time ranking system (TOP 10) introduction</li>
+                <li><b style="color: #2ecc71;">[Added]</b> star evolution guide horizontal width optimization layout</li>
+                <li><b style="color: #3498db;">[Changed]</b> mobile variable resolution response layout improvement</li>
+                <li><b style="color: #ff4d4d;">[Fixed]</b> specific condition where endgame script would disconnect bug fix</li>
+            </ul>
+        </div>
+        
+        <button onclick="closePatchNotes()" style="background: #00ffcc; color: #0b0c10; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;">Close</button>
+    </div>
+</div>
 
     <div id="supernova-overlay"></div>
 
@@ -476,6 +510,10 @@
                 <div class="tech-node" style="border-color: #3498db;"><div class="tech-circle" style="background:#3498db">Si</div> Si Silicon </div>
                 <div class="tech-node" style="border-color: #9b59b6;"><div class="tech-circle" style="background:#9b59b6">Fe</div> Fe Iron </div>
             </div>
+            <!-- 왼쪽 사이드바 맨 아래에 배치 -->
+            <button id="patch-notes-btn" onclick="openPatchNotes()" style="background: #1f2833; color: #66fcf1; border: 1px solid #00ffcc; padding: 6px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; box-shadow: 0 0 5px rgba(0,255,204,0.2);">
+                📋 PATCH NOTES (v1.1.0)
+            </button>
         </div>
 
         <!-- [CENTER] 메인 게임 스크린 -->
@@ -554,6 +592,13 @@
     </div>
 
 <script>
+    // 패치 노트 모달 제어 함수
+    window.openPatchNotes = function() {
+        document.getElementById('patch-modal').style.display = 'flex';
+    }
+    window.closePatchNotes = function() {
+        document.getElementById('patch-modal').style.display = 'none';
+    }
     const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
     const container = document.getElementById('game-container');
@@ -569,14 +614,14 @@
     let deadlineY = 120 * (containerHeight / 650);
 
     const elementTypes = [
-        { level: 0, symbol: "H",  radius: 15,  color: "#ff4d4d" },
-        { level: 1, symbol: "He", radius: 26,  color: "#ff9f43" },
-        { level: 2, symbol: "C",  radius: 40,  color: "#f1c40f" },
-        { level: 3, symbol: "O",  radius: 55,  color: "#2ecc71" },
-        { level: 4, symbol: "Ne", radius: 70,  color: "#00d2d3" }, 
-        { level: 5, symbol: "Mg", radius: 85,  color: "#ff9ff3" }, 
-        { level: 6, symbol: "Si", radius: 100, color: "#3498db" },
-        { level: 7, symbol: "Fe", radius: 115, color: "#9b59b6" }
+        { level: 0, symbol: "H",  baseRadius: 15,  color: "#ff4d4d" },
+        { level: 1, symbol: "He", baseRadius: 26,  color: "#ff9f43" },
+        { level: 2, symbol: "C",  baseRadius: 40,  color: "#f1c40f" },
+        { level: 3, symbol: "O",  baseRadius: 55,  color: "#2ecc71" },
+        { level: 4, symbol: "Ne", baseRadius: 70,  color: "#00d2d3" }, 
+        { level: 5, symbol: "Mg", baseRadius: 85,  color: "#ff9ff3" }, 
+        { level: 6, symbol: "Si", baseRadius: 100, color: "#3498db" },
+        { level: 7, symbol: "Fe", baseRadius: 115, color: "#9b59b6" }
     ];
 
     const engine = Engine.create({ gravity: { y: 0.9, x: 0 } });
@@ -695,12 +740,21 @@
         setTimeout(() => { if (window.loadLeaderboard) window.loadLeaderboard(); }, 1000);
     }
 
+    function getScaleFactor() {
+        return containerWidth / 420;
+    }
+
+    function getRadius(base) {
+        const r = Math.max(6, Math.round(base * getScaleFactor()));
+        return r;
+    }
+
     function createReadyBall() {
         if (isGameOverStarted) return;
         if (readyBallBody) Composite.remove(engine.world, readyBallBody);
-
         const p = elementTypes[currentLevel];
-        readyBallBody = Bodies.circle(currentMouseX, 45, p.radius, {
+        const r = getRadius(p.baseRadius);
+        readyBallBody = Bodies.circle(currentMouseX, 45, r, {
             isSensor: true,
             isStatic: true,
             plugin: { level: currentLevel, symbol: p.symbol, isGameBall: false },
@@ -720,7 +774,7 @@
         if (isGameOverStarted || isClickCooldown || !readyBallBody) return; 
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
-        const radius = elementTypes[currentLevel].radius;
+        const radius = getRadius(elementTypes[currentLevel].baseRadius);
         currentMouseX = Math.max(radius, Math.min(containerWidth - radius, mouseX));
         
         Body.setPosition(readyBallBody, { x: currentMouseX, y: 45 });
@@ -750,7 +804,8 @@
 
     function createBall(x, y, level, isFreshDrop = false) {
         const p = elementTypes[level];
-        const ball = Bodies.circle(x, y, p.radius, {
+        const r = getRadius(p.baseRadius);
+        const ball = Bodies.circle(x, y, r, {
             restitution: 0.15,
             friction: 0.08,
             frictionAir: 0.015,
@@ -869,7 +924,7 @@
 
         allBodies.forEach(b => {
             if (b.plugin && b.plugin.symbol) {
-                const fontSize = Math.max(11, b.circleRadius * 0.55);
+                const fontSize = Math.max(11, Math.round(b.circleRadius * 0.55));
                 context.font = `bold ${fontSize}px 'Segoe UI', sans-serif`;
                 context.fillStyle = "#ffffff";
                 
@@ -949,18 +1004,7 @@
 <p> drag down to view the guide </p>
 <br>
 <br>
-<div style="
-    max-width: 800px; 
-    margin: 30px auto 20px auto; 
-    padding: 25px; 
-    background-color: rgba(20, 20, 25, 0.8); 
-    border: 1px solid #333; 
-    border-radius: 12px; 
-    color: #e0e0e0; 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    line-height: 1.6;
-    text-align: left;
-">
+<div class="bottom-box">
     <h2 style="color: #61dafb; border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0;">
         🌌 STAR SUIKA GAME - Official Guide & Play Tutorial
     </h2>
@@ -975,6 +1019,35 @@
         <li style="margin-bottom: 8px;"><strong>Merge and Evolve:</strong> When two elements of the exact same type collide, they will automatically merge and evolve into a larger, next-level celestial body.</li>
         <li style="margin-bottom: 8px;"><strong>Game Over:</strong> Be careful not to let the floating elements cross the warning line at the top of the container. Keep your screen clean to score higher!</li>
     </ul>
+    <h3 style="color: #ffb74d; margin-top: 20px;">🌟 Stellar Evolution Guide</h3>
+    <p>
+        The game features a progression of cosmic elements that represent the stages of stellar evolution. 
+        Here’s the order of evolution you will encounter:
+    </p>
+    <ul style="padding-left: 20px;">
+        <li><strong>H (Hydrogen):</strong> The most basic element, forming the foundation of stars.</li>
+        <li><strong>He (Helium):</strong> Created from hydrogen fusion, leading to more complex elements.</li>
+        <li><strong>C (Carbon):</strong> A crucial building block for life and heavier stars.</li>
+        <li><strong>O (Oxygen):</strong> Essential for life and a key player in stellar processes.</li>
+        <li><strong>Ne (Neon):</strong> A noble gas that forms in the later stages of stellar evolution.</li>
+        <li><strong>Mg (Magnesium):</strong> Produced in massive stars, contributing to the cosmic cycle.</li>
+        <li><strong>Si (Silicon):</strong> A significant element in planetary formation and star cores.</li>
+        <li><strong>Fe (Iron):</strong> The final stage before a star's dramatic end, leading to supernovae or black holes.</li>
+    </ul>
 </div>
+<div class="bottom-box">
+    <h3 style="color: #ffb74d; margin-top: 20px;">💡 Tips & Strategies</h3>
+    <ul style="padding-left: 20px;">
+        <li style="margin-bottom: 8px;"><strong>Plan Your Drops:</strong> Think ahead about where to drop your elements to maximize merges and avoid clutter.</li>
+        <li style="margin-bottom: 8px;"><strong>Stay Calm:</strong> The game can get hectic, but staying calm and focused will help you make better decisions.</li>
+        <li style="margin-bottom: 8px;"><strong>Use the Edges:</strong> Dropping elements near the edges can help control the flow and prevent early game overs.</li>
+        <li style="margin-bottom: 8px;"><strong>Practice Makes Perfect:</strong> The more you play, the better you'll understand the physics and timing needed for high scores.</li>
+    </ul>
+    <p>
+        Enjoy the cosmic journey and aim for the stars! Share your scores with friends and see who can create the most magnificent universe!
+    </p>
+</div>
+<p>powered by NovaLabs</p>
+
 </body>
 </html>
